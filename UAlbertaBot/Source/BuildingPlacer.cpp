@@ -206,12 +206,13 @@ BWAPI::TilePosition BuildingPlacer::getBuildLocationNear(const Building & b,int 
     double ms1 = t.getElapsedTimeInMilliSec();
 
     // special easy case of having no pylons
-    int numPylons = BWAPI::Broodwar->self()->completedUnitCount(BWAPI::UnitTypes::Protoss_Pylon);
-    if (b.type.requiresPsi() && numPylons == 0)
-    {
-        return BWAPI::TilePositions::None;
-    }
-
+	if (BWAPI::Broodwar->self()->getRace() == BWAPI::Races::Protoss) {
+		int numPylons = BWAPI::Broodwar->self()->completedUnitCount(BWAPI::UnitTypes::Protoss_Pylon);
+		if (b.type.requiresPsi() && numPylons == 0)
+		{
+			return BWAPI::TilePositions::None;
+		}
+	}
     // iterate through the list until we've found a suitable location
     for (size_t i(0); i < closestToBuilding.size(); ++i)
     {

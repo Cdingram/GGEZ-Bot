@@ -149,7 +149,6 @@ void ProductionManager::manageBuildOrderQueue()
 
 		// check to see if we can make it right now
 		bool canMake = canMakeNow(producer, currentItem.metaType);
-
 		// if we try to build too many refineries manually remove it
 		if (currentItem.metaType.isRefinery() && (BWAPI::Broodwar->self()->allUnitCount(BWAPI::Broodwar->self()->getRace().getRefinery() >= 3)))
 		{
@@ -161,8 +160,50 @@ void ProductionManager::manageBuildOrderQueue()
         if (currentItem.metaType.isBuilding() && !(producer && canMake) && currentItem.metaType.whatBuilds().isWorker())
 		{
 			// construct a temporary building object
-			Building b(currentItem.metaType.getUnitType(), BWAPI::Broodwar->self()->getStartLocation());
-            b.isGasSteal = currentItem.isGasSteal;
+			//if bunker, place at chokepoint - CODY
+			
+			BWAPI::UnitType type = currentItem.metaType.getUnitType();
+			std::string typeName = type.getName();
+			static bool first = true;
+			Building b;
+			//BWAPI::Broodwar->printf("Height: %i Width: %i\n", MapGrid::Instance());
+			if (typeName.compare("Terran_Bunker") == 0) {
+			//	
+			//	BWAPI::Position home = BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
+			//	//BWAPI::Broodwar->printf("home %i %i", home.x, home.y);
+			//	BWTA::BaseLocation * enemyHome = InformationManager::Instance().getMainBaseLocation(BWAPI::Broodwar->enemy());
+			//	BWAPI::Position choke;
+			//	if (!enemyHome) {
+			//		choke = BWTA::getNearestChokepoint(home)->getCenter();
+			//	}
+			//	else{
+			//		BWAPI::Position enemyPos = (*enemyHome).getPosition();
+			//		int min=999999;
+			//		BWTA::Region *homeRegion = BWTA::getRegion(home);
+			//		for (auto chokePoint : (*homeRegion).getChokepoints()){
+			//			double dist = BWTA::getGroundDistance(BWAPI::TilePosition((*chokePoint).getCenter()),BWAPI::TilePosition(enemyPos));
+			//			if (dist < min) {
+			//				min =dist;
+			//				choke = (*chokePoint).getCenter();
+			//			}
+			//		}
+			//	}
+
+			//	int x = (choke.x + home.x) / 2;
+			//	int y = (choke.y + home.y) / 2;
+
+			//	BWAPI::Position chokePos = BWAPI::Position(x, y);
+			//	//BWAPI::Broodwar->printf("choke %i %i", chokePos.x, chokePos.y);
+
+				b = Building(currentItem.metaType.getUnitType(), BWAPI::Broodwar->self()->getStartLocation());
+				b.isGasSteal = currentItem.isGasSteal;
+			}
+			else{
+				b = Building(currentItem.metaType.getUnitType(), BWAPI::Broodwar->self()->getStartLocation());
+				b.isGasSteal = currentItem.isGasSteal;
+			}
+
+			
 
 			// set the producer as the closest worker, but do not set its job yet
 			producer = WorkerManager::Instance().getBuilder(b, false);
@@ -174,6 +215,9 @@ void ProductionManager::manageBuildOrderQueue()
 		// if we can make the current item
 		if (producer && canMake) 
 		{
+			if (currentItem.metaType.getUnitType().getName().compare("Terran_Bunker") == 0) {
+				BWAPI::Broodwar->printf("Produce and canmake bunker");
+			}
 			// create it
 			create(producer, currentItem);
 			_assignedWorkerForThisBuilding = false;
@@ -342,7 +386,46 @@ void ProductionManager::create(BWAPI::Unit producer, BuildOrderItem & item)
         && !t.getUnitType().isAddon())
     {
         // send the building task to the building manager
-        BuildingManager::Instance().addBuildingTask(t.getUnitType(), BWAPI::Broodwar->self()->getStartLocation(), item.isGasSteal);
+		BWAPI::TilePosition home = BWAPI::Broodwar->self()->getStartLocation();
+		//BWAPI::Broodwar->printf("home :: %i %i", home.x, home.y);
+		//if bunker, place at chokepoint - CODY
+		BWAPI::UnitType type = t.getUnitType();
+		std::string typeName = type.getName();
+		static bool first = true;
+		//BWAPI::Broodwar->printf("Height: %i Width: %i\n", MapGrid::Instance());
+		if (typeName.compare("Terran_Bunker") == 0) {
+
+			BWAPI::Position home = BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
+			//BWAPI::Broodwar->printf("home %i %i", home.x, home.y);
+			BWTA::BaseLocation * enemyHome = InformationManager::Instance().getMainBaseLocation(BWAPI::Broodwar->enemy());
+			BWAPI::Position choke;
+			// without this other chokepoint is often used
+			if (!enemyHome) {
+				choke = BWTA::getNearestChokepoint(home)->getCenter();
+			}
+			else{
+				BWAPI::Position enemyPos = (*enemyHome).getPosition();
+				int min = 999999;
+				BWTA::Region *homeRegion = BWTA::getRegion(home);
+				for (auto chokePoint : (*homeRegion).getChokepoints()){
+					double dist = BWTA::getGroundDistance(BWAPI::TilePosition((*chokePoint).getCenter()), BWAPI::TilePosition(enemyPos));
+					if (dist < min) {
+						min = dist;
+						choke = (*chokePoint).getCenter();
+					}
+				}
+			}
+
+			int x = (choke.x + home.x)/2;
+			int y = (choke.y + home.y)/2;
+
+			BWAPI::Position chokePos = BWAPI::Position(x, y);
+			//BWAPI::Broodwar->printf("choke %i %i", chokePos.x, chokePos.y);
+			BuildingManager::Instance().addBuildingTask(t.getUnitType(), BWAPI::TilePosition(chokePos), item.isGasSteal);
+		}
+		else {
+			BuildingManager::Instance().addBuildingTask(t.getUnitType(), BWAPI::Broodwar->self()->getStartLocation(), item.isGasSteal);
+		}
     }
     else if (t.getUnitType().isAddon())
     {

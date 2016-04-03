@@ -23,17 +23,19 @@ class MapTools
 
     MapTools();
 
-    int                     getIndex(int row,int col);   // return the index of the 1D array from (row,col)
+    
     bool                    unexplored(DistanceMap & dmap,const int index) const;
     void                    reset();                           // resets the distance and fringe vectors, call before each search    
     void                    setBWAPIMapData();                 // reads in the map data from bwapi and stores it in our map format
     void                    resetFringe();
     void                    computeDistance(DistanceMap & dmap,const BWAPI::Position p); // computes walk distance from Position P to all other points on the map
-    BWAPI::TilePosition     getTilePosition(int index);
+    //BWAPI::TilePosition     getTilePosition(int index);
 
 public:
-
+	
     static MapTools &       Instance();
+	int                     getIndex(int row, int col);   // return the index of the 1D array from (row,col)
+	BWAPI::TilePosition     getTilePosition(int index);
 
     void                    parseMap();
     void                    search(DistanceMap & dmap,const int sR,const int sC);

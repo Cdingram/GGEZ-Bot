@@ -8,6 +8,7 @@ const size_t AttackPriority = 1;
 const size_t BaseDefensePriority = 2;
 const size_t ScoutDefensePriority = 3;
 const size_t DropPriority = 4;
+BWAPI::Position defensePos;
 
 CombatCommander::CombatCommander() 
     : _initialized(false)
@@ -25,6 +26,12 @@ void CombatCommander::initializeSquads()
 	_squadData.addSquad("MainAttack", Squad("MainAttack", mainAttackOrder, AttackPriority));
 
     BWAPI::Position ourBasePosition = BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
+
+	auto *choke = BWTA::getNearestChokepoint(ourBasePosition);
+	BWAPI::Position defensePos = (*choke).getCenter();
+	SquadOrder StayPutOrder(SquadOrderTypes::Defend, defensePos, 300, "Stay Put in base");
+	_squadData.addSquad("StayPut", Squad("StayPut", StayPutOrder, BaseDefensePriority));
+
 
     // the scout defense squad will handle chasing the enemy worker scout
     SquadOrder enemyScoutDefense(SquadOrderTypes::Defend, ourBasePosition, 900, "Get the scout");
@@ -65,6 +72,7 @@ void CombatCommander::update(const BWAPI::Unitset & combatUnits)
         updateIdleSquad();
         updateDropSquads();
         updateScoutDefenseSquad();
+		StayPut();
 		updateDefenseSquads();
 		updateAttackSquads();
 	}
@@ -75,6 +83,7 @@ void CombatCommander::update(const BWAPI::Unitset & combatUnits)
 void CombatCommander::updateIdleSquad()
 {
     Squad & idleSquad = _squadData.getSquad("Idle");
+
     for (auto & unit : _combatUnits)
     {
         // if it hasn't been assigned to a squad yet, put it in the low priority idle squad
@@ -82,11 +91,16 @@ void CombatCommander::updateIdleSquad()
         {
             idleSquad.addUnit(unit);
         }
+
     }
 }
 
 void CombatCommander::updateAttackSquads()
 {
+	if (_combatUnits.empty() || BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Terran_Science_Vessel) != 1)
+	{
+		return;
+	}
     Squad & mainAttackSquad = _squadData.getSquad("MainAttack");
 
     for (auto & unit : _combatUnits)
@@ -233,9 +247,43 @@ void CombatCommander::updateScoutDefenseSquad()
     }
 }
 
+void CombatCommander::StayPut() {
+
+	Squad & stayPut = _squadData.getSquad("StayPut");
+	// defend untill we have a science vessel
+	if (_combatUnits.empty() || BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Terran_Science_Vessel) == 1)
+	{
+		return;
+	}
+
+	for (auto & unit : _combatUnits)
+	{
+		// get every unit of a lower priority and put it into the defense squad
+		if (!unit->getType().isWorker() && (unit->getType() != BWAPI::UnitTypes::Zerg_Overlord) && _squadData.canAssignUnitToSquad(unit, stayPut))
+		{
+			// if theres a bunker with room, go into it
+			for (auto unit2 : BWAPI::Broodwar->self()->getUnits()){
+				if ((*unit2).getType() == BWAPI::UnitTypes::Terran_Bunker){
+					BWAPI::Unit bunker = BWAPI::Broodwar->getUnit((*unit2).getID());
+					BWAPI::Unitset set = bunker->getLoadedUnits();
+					if (set.size() < 4) {
+						(*unit).rightClick(bunker);
+					}
+				}
+			}
+			// add units to squad
+			_squadData.assignUnitToSquad(unit, stayPut);
+		}
+	}
+
+	// fufill squad order
+	SquadOrder mainAttackOrder(SquadOrderTypes::Defend, defensePos, 300, "Attack Enemy Base");
+	stayPut.setSquadOrder(mainAttackOrder);
+}
+
 void CombatCommander::updateDefenseSquads() 
 {
-	if (_combatUnits.empty()) 
+	if (_combatUnits.empty() || BWAPI::Broodwar->self()->allUnitCount(BWAPI::UnitTypes::Terran_Science_Vessel) == 1)
     { 
         return; 
     }

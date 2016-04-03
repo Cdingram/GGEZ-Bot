@@ -25,7 +25,7 @@ void RangedManager::assignTargetsOld(const BWAPI::Unitset & targets)
 	{
 		// train sub units such as scarabs or interceptors
 		//trainSubUnits(rangedUnit);
-
+		
 		// if the order is to attack or defend
 		if (order.getType() == SquadOrderTypes::Attack || order.getType() == SquadOrderTypes::Defend) 
         {
@@ -34,7 +34,6 @@ void RangedManager::assignTargetsOld(const BWAPI::Unitset & targets)
 			{
 				// find the best target for this zealot
 				BWAPI::Unit target = getTarget(rangedUnit, rangedUnitTargets);
-                
                 if (target && Config::Debug::DrawUnitTargetInfo) 
 	            {
 		            BWAPI::Broodwar->drawLineMap(rangedUnit->getPosition(), rangedUnit->getTargetPosition(), BWAPI::Colors::Purple);

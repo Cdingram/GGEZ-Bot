@@ -74,7 +74,7 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
         }
 
         if (_debugMode) { BWAPI::Broodwar->printf("Assigning Worker To: %s",b.type.getName().c_str()); }
-
+		//BWAPI::Broodwar->printf("Assigning Worker To: %s", b.type.getName().c_str());
         // grab a worker unit from WorkerManager which is closest to this final position
         BWAPI::Unit workerToAssign = WorkerManager::Instance().getBuilder(b);
 
@@ -89,8 +89,10 @@ void BuildingManager::assignWorkersToUnassignedBuildings()
             b.builderUnit = workerToAssign;
 
             BWAPI::TilePosition testLocation = getBuildingLocation(b);
+			//BWAPI::Broodwar->printf("test x: %i y: %i", testLocation.x, testLocation.y);
             if (!testLocation.isValid())
             {
+				//BWAPI::Broodwar->printf("INVALID location");
                 continue;
             }
 
